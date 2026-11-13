@@ -9,14 +9,36 @@ type Runner = (text: string, params?: unknown[]) => Promise<Row[]>;
 
 const g = globalThis as unknown as { __hubRunner?: Promise<Runner> };
 
+/** Neon/Vercel may name the variable differently depending on the prefix chosen when connecting. */
+export function databaseUrl(): string | undefined {
+  const env = process.env;
+  return (
+    env.DATABASE_URL ||
+    env.POSTGRES_URL ||
+    Object.entries(env).find(([k, v]) => v && /(_DATABASE_URL|_POSTGRES_URL)$/.test(k) && !/UNPOOLED|NON_POOLING/.test(k))?.[1]
+  );
+}
+
 async function makeRunner(): Promise<Runner> {
-  const url = process.env.DATABASE_URL;
+  const url = databaseUrl();
+  if (!url && process.env.VERCEL) {
+    throw new Error(
+      "No database connected. In Vercel open Storage → your Neon database → Connect Project → renbnb-hub (Production), then redeploy.",
+    );
+  }
   if (url) {
     const postgres = (await import("postgres")).default;
     const sql = postgres(url, { ssl: "require", max: 3, idle_timeout: 20, prepare: false });
     const run: Runner = async (text, params = []) =>
       (await sql.unsafe(text, params as never[])) as unknown as Row[];
-    await ensureSchema(run);
+    if (!(await schemaIsCurrent(run))) {
+      // Several serverless instances can boot at once: serialize schema setup with an advisory lock
+      await sql.begin(async (tx) => {
+        await tx.unsafe(`SELECT pg_advisory_xact_lock(724001)`);
+        const txRun: Runner = async (text, params = []) => (await tx.unsafe(text, params as never[])) as unknown as Row[];
+        if (!(await schemaIsCurrent(txRun))) await ensureSchema(txRun);
+      });
+    }
     return run;
   }
   const { PGlite } = await import("@electric-sql/pglite");
@@ -36,7 +58,10 @@ async function makeRunner(): Promise<Runner> {
 }
 
 export async function q<T = Row>(text: string, params: unknown[] = []): Promise<T[]> {
-  if (!g.__hubRunner) g.__hubRunner = makeRunner();
+  if (!g.__hubRunner) {
+    g.__hubRunner = makeRunner();
+    g.__hubRunner.catch(() => (g.__hubRunner = undefined)); // retry on next request instead of staying broken
+  }
   const run = await g.__hubRunner;
   return (await run(text, params)) as T[];
 }
@@ -210,6 +235,15 @@ export const PROPERTY_SEED = [
   { name: "Twin Casa", code: "000", keyword: "twin", units: 2, combo: true, sort: 7 },
 ];
 
+const SCHEMA_VERSION = "1";
+
+async function schemaIsCurrent(run: Runner): Promise<boolean> {
+  const t = await run(`SELECT to_regclass('public.settings') AS t`, []);
+  if (!t[0]?.t) return false;
+  const v = await run(`SELECT value FROM settings WHERE key='schema_version'`, []);
+  return v[0]?.value === SCHEMA_VERSION;
+}
+
 async function ensureSchema(run: Runner) {
   for (const stmt of SCHEMA) await run(stmt, []);
   for (const p of PROPERTY_SEED) {
@@ -229,4 +263,8 @@ async function ensureSchema(run: Runner) {
       await run(`INSERT INTO accounts (name, kind) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [name, kind]);
     }
   }
+  await run(
+    `INSERT INTO settings (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`,
+    [SCHEMA_VERSION],
+  );
 }

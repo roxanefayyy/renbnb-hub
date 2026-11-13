@@ -1,5 +1,5 @@
 import { addAccount, logout, renameAccount, runSync, uploadCsv } from "@/app/actions";
-import { q } from "@/lib/db";
+import { q, databaseUrl } from "@/lib/db";
 import { getProperties } from "@/lib/bookings";
 import { Card, Field, PageHeader } from "@/components/ui";
 
@@ -14,7 +14,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     q<{ n: number; latest: string | null; src: string | null }>(`SELECT count(*)::int AS n, max(checkin) AS latest, string_agg(DISTINCT source, ', ') AS src FROM reservations`),
   ]);
   const hasToken = !!process.env.HOSPITABLE_TOKEN;
-  const hasDb = !!process.env.DATABASE_URL;
+  const hasDb = !!databaseUrl();
 
   return (
     <div>
