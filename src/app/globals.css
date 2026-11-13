@@ -1,26 +1,70 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-timber: #393130;
+  --color-rustic: #A56F49;
+  --color-maple: #CA9552;
+  --color-oat: #F2E0CF;
+  --color-sage: #E4E6DB;
+  --color-linen: #F8F2EB;
+  --color-ink: #1A1A1A;
+  --color-good: #4F7A4A;
+  --color-warn: #B7791F;
+  --color-bad: #A33A2B;
+  --font-display: "Bricolage Grotesque Variable", sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-linen);
+  color: var(--color-timber);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+  .card {
+    @apply bg-white/80 border border-timber/10 rounded-xl p-4 shadow-[0_1px_2px_rgba(57,49,48,0.05)];
+  }
+  .eyebrow {
+    @apply text-[10px] font-semibold uppercase tracking-[0.18em] text-rustic;
+  }
+  .h1 {
+    @apply font-display text-2xl md:text-3xl font-semibold text-timber;
+  }
+  .h2 {
+    @apply font-display text-lg font-semibold text-timber;
+  }
+  .muted {
+    @apply text-timber/55;
+  }
+  .input {
+    @apply bg-white border border-timber/20 rounded-lg px-3 py-2 text-sm text-timber outline-none focus:border-rustic focus:ring-2 focus:ring-maple/30;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1 rounded-lg bg-timber text-linen px-3.5 py-2 text-sm font-medium hover:bg-rustic transition-colors cursor-pointer;
+  }
+  .btn-sm {
+    @apply inline-flex items-center justify-center rounded-md border border-timber/20 bg-white px-2 py-1 text-xs font-medium text-timber hover:border-rustic hover:text-rustic cursor-pointer;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg border border-timber/20 px-3 py-2 text-sm font-medium text-timber hover:border-rustic hover:text-rustic cursor-pointer;
+  }
+  .tbl {
+    @apply w-full text-sm;
+  }
+  .tbl th {
+    @apply text-left text-[10px] font-semibold uppercase tracking-wider text-timber/50 py-2 px-2 border-b border-timber/10 whitespace-nowrap;
+  }
+  .tbl td {
+    @apply py-2 px-2 border-b border-timber/5 align-top;
+  }
+  .tbl td.num, .tbl th.num {
+    @apply text-right tabular-nums;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap;
+  }
+  .label {
+    @apply block text-[11px] font-medium text-timber/60 mb-1;
+  }
 }
