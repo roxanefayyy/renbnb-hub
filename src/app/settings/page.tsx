@@ -2,8 +2,10 @@ import { addAccount, logout, renameAccount, runSync, uploadCsv } from "@/app/act
 import { q, databaseUrl } from "@/lib/db";
 import { getProperties } from "@/lib/bookings";
 import { Card, Field, PageHeader } from "@/components/ui";
+import { SubmitButton } from "@/components/submit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ msg?: string }> }) {
   const { msg } = await searchParams;
@@ -32,14 +34,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <div>Database: {hasDb ? <b className="text-good">Postgres</b> : <b className="text-warn">local dev database</b>}</div>
           </div>
           <form action={runSync} className="mb-4">
-            <button className="btn" disabled={!hasToken}>Sync Hospitable now</button>
-            <p className="text-xs muted mt-1">It also syncs automatically every day at 5am.</p>
+            <SubmitButton disabled={!hasToken} pending="Syncing… can take up to a minute">Sync Hospitable now</SubmitButton>
+            <p className="text-xs muted mt-1">{hasToken ? "It also syncs automatically every day at 5am." : "Add HOSPITABLE_TOKEN in Vercel to turn this on."}</p>
           </form>
           <form action={uploadCsv} className="space-y-2">
             <Field label="Or import a Hospitable CSV (Metrics → Exports → Reservations & Financials)">
               <input type="file" name="file" accept=".csv" className="input w-full" />
             </Field>
-            <button className="btn-ghost">Import CSV</button>
+            <SubmitButton className="btn-ghost" pending="Importing…">Import CSV</SubmitButton>
             <p className="text-xs muted">Re-importing is safe. Bookings update by code and never duplicate. Check-ins before Jan 1, 2026 are skipped.</p>
           </form>
         </Card>

@@ -28,7 +28,7 @@ async function makeRunner(): Promise<Runner> {
   }
   if (url) {
     const postgres = (await import("postgres")).default;
-    const sql = postgres(url, { ssl: "require", max: 3, idle_timeout: 20, prepare: false });
+    const sql = postgres(url, { ssl: "require", max: 3, idle_timeout: 20, prepare: false, onnotice: () => {} });
     const run: Runner = async (text, params = []) =>
       (await sql.unsafe(text, params as never[])) as unknown as Row[];
     if (!(await schemaIsCurrent(run))) {

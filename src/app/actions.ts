@@ -218,11 +218,14 @@ export async function uploadCsv(fd: FormData) {
 
 export async function runSync() {
   let msg: string;
+  console.log("[sync] manual Hospitable sync started");
   try {
     const r = await syncHospitable();
+    console.log("[sync] done", JSON.stringify(r));
     msg = `Hospitable sync: ${r.fetched} fetched, ${r.inserted} added, ${r.updated} updated.` +
       (r.unmapped.length ? ` Unmatched listings: ${r.unmapped.join(", ")}` : "");
   } catch (e) {
+    console.error("[sync] failed", e);
     msg = "Sync failed: " + (e as Error).message;
   }
   refresh("/settings", "/metrics", "/calendar", "/money");
