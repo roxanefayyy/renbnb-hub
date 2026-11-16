@@ -1,8 +1,8 @@
 import { addExpense, deleteExpense } from "@/app/actions";
 import { q } from "@/lib/db";
 import { getProperties } from "@/lib/bookings";
-import { EXPENSE_CATEGORIES, fmtDate, monthLabel, peso, today } from "@/lib/util";
-import { AddForm, Card, Empty, Field, PageHeader, Select } from "@/components/ui";
+import { CATEGORY_ICON, categoryGroup, fmtDate, monthLabel, OWNER_DRAW, peso, today } from "@/lib/util";
+import { AddForm, CategorySelect, Card, Empty, Field, PageHeader, Select } from "@/components/ui";
 import { MoneyTabs } from "../tabs";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
     ),
     q<{ m: string }>(`SELECT DISTINCT substr(date,1,7) AS m FROM expenses ORDER BY 1 DESC LIMIT 18`),
   ]);
-  const total = rows.reduce((s, r) => s + r.amount, 0);
+  const total = rows.filter((r) => r.category !== OWNER_DRAW).reduce((s, r) => s + r.amount, 0);
   const byCat = Object.entries(rows.reduce<Record<string, number>>((a, r) => ((a[r.category] = (a[r.category] ?? 0) + r.amount), a), {})).sort((a, b) => b[1] - a[1]);
-  const noReceipt = rows.filter((r) => !r.receipt_no && !r.receipt_url && r.category !== "Owner draw").length;
+  const noReceipt = rows.filter((r) => !r.receipt_no && !r.receipt_url && r.category !== OWNER_DRAW).length;
   const monthOpts = Array.from(new Set([today().slice(0, 7), ...months.map((x) => x.m)]));
 
   return (
@@ -37,7 +37,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <AddForm label="Add expense" action={addExpense}>
         <Field label="Date"><input type="date" name="date" defaultValue={today()} className="input w-full" required /></Field>
         <Field label="Amount ₱"><input type="number" step="0.01" name="amount" className="input w-full" required /></Field>
-        <Field label="Category"><Select name="category" options={EXPENSE_CATEGORIES} required /></Field>
+        <Field label="Category"><CategorySelect /></Field>
         <Field label="Unit"><Select name="property_id" options={props.map((p) => ({ value: p.id, label: p.name }))} /></Field>
         <Field label="Paid from"><Select name="account_id" options={accounts.map((a) => ({ value: a.id, label: a.name }))} /></Field>
         <Field label="Vendor"><input name="vendor" className="input w-full" /></Field>
@@ -56,9 +56,9 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                   {rows.map((r) => (
                     <tr key={r.id}>
                       <td className="whitespace-nowrap">{fmtDate(r.date)}</td>
-                      <td className="whitespace-nowrap">{r.category}</td>
+                      <td className="whitespace-nowrap">{CATEGORY_ICON[r.category] ?? ""} {r.category}</td>
                       <td>{r.description ?? ""}{r.vendor ? <span className="muted"> · {r.vendor}</span> : ""}
-                        {r.receipt_url ? <a href={r.receipt_url} target="_blank" rel="noreferrer" className="text-rustic text-xs ml-1">receipt ↗</a> : !r.receipt_no && r.category !== "Owner draw" ? <span className="text-xs text-warn ml-1">no receipt</span> : null}
+                        {r.receipt_url ? <a href={r.receipt_url} target="_blank" rel="noreferrer" className="text-rustic text-xs ml-1">receipt ↗</a> : !r.receipt_no && r.category !== OWNER_DRAW ? <span className="text-xs text-warn ml-1">no receipt</span> : null}
                       </td>
                       <td className="text-xs">{r.property ?? "Shared"}</td>
                       <td className="text-xs">{r.account ?? "–"}</td>
@@ -73,7 +73,20 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         </Card>
         <Card title="By category">
           {byCat.length === 0 ? <Empty>–</Empty> : (
-            <ul className="text-sm space-y-1">{byCat.map(([c, v]) => <li key={c} className="flex justify-between"><span>{c}</span><span className="tabular-nums">{peso(v)}</span></li>)}</ul>
+            <div className="space-y-3">
+              {["Direct costs", "Operational costs", "Other", "Owner draw"].map((grp) => {
+                const items = byCat.filter(([c]) => categoryGroup(c) === grp);
+                if (!items.length) return null;
+                return (
+                  <div key={grp}>
+                    <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-rustic mb-1">
+                      <span>{grp}</span><span className="tabular-nums">{peso(items.reduce((s, [, v]) => s + v, 0))}</span>
+                    </div>
+                    <ul className="text-sm space-y-1">{items.map(([c, v]) => <li key={c} className="flex justify-between"><span>{CATEGORY_ICON[c] ?? ""} {c}</span><span className="tabular-nums">{peso(v)}</span></li>)}</ul>
+                  </div>
+                );
+              })}
+            </div>
           )}
           {noReceipt > 0 && <p className="text-xs text-warn mt-3">{noReceipt} expense(s) without a receipt. Without receipts they can&apos;t be deducted.</p>}
         </Card>

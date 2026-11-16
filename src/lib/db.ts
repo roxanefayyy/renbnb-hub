@@ -235,7 +235,7 @@ export const PROPERTY_SEED = [
   { name: "Twin Casa", code: "000", keyword: "twin", units: 2, combo: true, sort: 7 },
 ];
 
-const SCHEMA_VERSION = "1";
+const SCHEMA_VERSION = "2";
 
 async function schemaIsCurrent(run: Runner): Promise<boolean> {
   const t = await run(`SELECT to_regclass('public.settings') AS t`, []);
@@ -243,6 +243,53 @@ async function schemaIsCurrent(run: Runner): Promise<boolean> {
   const v = await run(`SELECT value FROM settings WHERE key='schema_version'`, []);
   return v[0]?.value === SCHEMA_VERSION;
 }
+
+// Old category → Roxanne's chart of accounts (Nov 2026)
+const CATEGORY_REMAP: [string, string][] = [
+  ["Association dues", "Condo Dues"],
+  ["Repairs & maintenance", "Maintenance & Repairs"],
+  ["Housekeeping labor", "Cleaning Fee"],
+  ["Laundry & linen", "Laundry"],
+  ["Guest supplies", "Supplies"],
+  ["Amortization / rent", "Mortgages"],
+  ["Software / channel manager", "Hospitable"],
+  ["Salaries (Rhea/staff)", "Operations Manager"],
+  ["Marketing & content", "Marketing & Ads"],
+  ["Permits & taxes", "Legal & Permits"],
+  ["Professional fees", "Legal & Permits"],
+];
+
+/** Each migration is idempotent and runs once, in order, when schema_version is behind. */
+const MIGRATIONS: Record<number, (run: Runner) => Promise<void>> = {
+  2: async (run) => {
+    // Business accounts: Metrobank + Maribank. GCash is personal, so it's removed from the books.
+    const metro = await run(`SELECT id FROM accounts WHERE name='Metrobank'`, []);
+    if (!metro.length) {
+      const b1 = await run(`SELECT id FROM accounts WHERE name='Bank 1'`, []);
+      if (b1.length) await run(`UPDATE accounts SET name='Metrobank', kind='bank' WHERE id=$1`, [b1[0].id]);
+      else await run(`INSERT INTO accounts (name, kind) VALUES ('Metrobank','bank')`, []);
+    }
+    await run(`INSERT INTO accounts (name, kind) VALUES ('Maribank','bank') ON CONFLICT (name) DO NOTHING`, []);
+    const g = await run(`SELECT id FROM accounts WHERE name='GCash'`, []);
+    if (g.length) {
+      const id = g[0].id;
+      for (const t of ["expenses", "bills", "guest_payments"]) await run(`UPDATE ${t} SET account_id=NULL WHERE account_id=$1`, [id]);
+      await run(`DELETE FROM accounts WHERE id=$1`, [id]);
+    }
+    // Balances as of 2026-11-16 (from Roxanne)
+    for (const [name, bal] of [["Metrobank", 10070.77], ["Maribank", 3958.4]] as const) {
+      await run(
+        `INSERT INTO balance_checks (account_id, date, balance) SELECT id, '2026-11-16', $2 FROM accounts WHERE name=$1
+         ON CONFLICT (account_id, date) DO UPDATE SET balance=EXCLUDED.balance`,
+        [name, bal],
+      );
+    }
+    for (const [from, to] of CATEGORY_REMAP) {
+      await run(`UPDATE expenses SET category=$2 WHERE category=$1`, [from, to]);
+      await run(`UPDATE bills SET category=$2 WHERE category=$1`, [from, to]);
+    }
+  },
+};
 
 async function ensureSchema(run: Runner) {
   for (const stmt of SCHEMA) await run(stmt, []);
@@ -256,13 +303,16 @@ async function ensureSchema(run: Runner) {
   const acc = await run(`SELECT count(*)::int AS n FROM accounts`, []);
   if (Number(acc[0]?.n ?? 0) === 0) {
     for (const [name, kind] of [
-      ["Bank 1", "bank"],
-      ["GCash", "gcash"],
+      ["Metrobank", "bank"],
+      ["Maribank", "bank"],
       ["Petty Cash (Rhea)", "petty"],
     ]) {
       await run(`INSERT INTO accounts (name, kind) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [name, kind]);
     }
   }
+  const cur = await run(`SELECT value FROM settings WHERE key='schema_version'`, []);
+  const from = Number(cur[0]?.value ?? 1);
+  for (let v = from + 1; v <= Number(SCHEMA_VERSION); v++) await MIGRATIONS[v]?.(run);
   await run(
     `INSERT INTO settings (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`,
     [SCHEMA_VERSION],

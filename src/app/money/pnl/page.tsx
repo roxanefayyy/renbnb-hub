@@ -1,5 +1,6 @@
+import { Fragment } from "react";
 import { pnl } from "@/lib/data";
-import { CHANNEL_LABEL, CHANNELS, monthLabel, peso, pct, today } from "@/lib/util";
+import { CHANNEL_LABEL, CHANNELS, EXPENSE_CATEGORIES, EXPENSE_GROUPS, monthLabel, peso, pct, today } from "@/lib/util";
 import { Card, PageHeader } from "@/components/ui";
 import { MoneyTabs } from "../tabs";
 
@@ -11,12 +12,13 @@ export default async function PnlPage({ searchParams }: { searchParams: Promise<
   const toMonth = year === today().slice(0, 4) ? today().slice(0, 7) : `${year}-12`;
   const rows = await pnl(`${year}-01`, toMonth);
   const cats = rows[0]?.cats ?? [];
+  const other = cats.filter((c) => !EXPENSE_CATEGORIES.includes(c));
   const sum = (f: (r: (typeof rows)[number]) => number) => rows.reduce((s, r) => s + f(r), 0);
   const Row = ({ label, get, bold, tone, fmt = peso }: { label: string; get: (r: (typeof rows)[number]) => number; bold?: boolean; tone?: string; fmt?: (n: number) => string }) => (
     <tr className={bold ? "font-semibold bg-linen/60" : ""}>
       <td className={`sticky left-0 bg-white whitespace-nowrap ${bold ? "bg-linen" : ""}`}>{label}</td>
       {rows.map((r) => <td key={r.month} className={`num ${tone ?? ""}`}>{fmt(get(r))}</td>)}
-      <td className={`num ${tone ?? ""} font-semibold`}>{fmt === pct ? pct(sum((r) => r.operatingProfit) / (sum((r) => r.netRevenue) || 1)) : fmt(sum(get))}</td>
+      <td className={`num ${tone ?? ""} font-semibold`}>{fmt === pct ? (sum((r) => r.netRevenue) ? pct(sum((r) => r.operatingProfit) / sum((r) => r.netRevenue)) : "–") : fmt(sum(get))}</td>
     </tr>
   );
 
@@ -38,10 +40,17 @@ export default async function PnlPage({ searchParams }: { searchParams: Promise<
               {CHANNELS.filter((c) => c !== "direct").map((c) => <Row key={c} label={`Platform fee · ${CHANNEL_LABEL[c]}`} get={(r) => -(r.byChannel[c]?.fees ?? 0)} tone="text-bad" />)}
               <Row label="Cancellation income" get={(r) => r.cancelIncome} />
               <Row label="Net revenue" get={(r) => r.netRevenue} bold />
-              {cats.filter((c) => c !== "Owner draw").map((c) => <Row key={c} label={c} get={(r) => -(r.expenses[c] ?? 0)} tone="text-timber/80" />)}
-              <Row label="Operating expenses" get={(r) => -r.opex} bold tone="text-bad" />
+              {EXPENSE_GROUPS.map((g) => (
+                <Fragment key={g.group}>
+                  <tr><td colSpan={rows.length + 2} className="sticky left-0 bg-white pt-4 text-[10px] font-semibold uppercase tracking-wider text-rustic">▸ {g.group} <span className="normal-case tracking-normal text-timber/40 font-normal">({g.hint})</span></td></tr>
+                  {g.items.map((i) => <Row key={i.name} label={`${i.icon} ${i.name}`} get={(r) => -(r.expenses[i.name] ?? 0)} tone="text-timber/80" />)}
+                  <Row label={`Total ${g.group.toLowerCase()}`} get={(r) => -g.items.reduce((s, i) => s + (r.expenses[i.name] ?? 0), 0)} bold tone="text-bad" />
+                </Fragment>
+              ))}
+              {other.length > 0 && other.map((c) => <Row key={c} label={`Other · ${c}`} get={(r) => -(r.expenses[c] ?? 0)} tone="text-warn" />)}
+              <Row label="Total expenses" get={(r) => -r.opex} bold tone="text-bad" />
               <Row label="Operating profit" get={(r) => r.operatingProfit} bold tone="text-good" />
-              <Row label="Margin" get={(r) => r.margin} fmt={pct} />
+              <Row label="Margin" get={(r) => (r.netRevenue ? r.margin : NaN)} fmt={pct} />
               <Row label="Owner draws" get={(r) => -r.draws} />
             </tbody>
           </table>

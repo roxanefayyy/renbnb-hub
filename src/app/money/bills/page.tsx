@@ -2,8 +2,8 @@ import { addBill, deleteBill, payBill, toggleBill } from "@/app/actions";
 import { q } from "@/lib/db";
 import { getProperties } from "@/lib/bookings";
 import { billSchedule, getBills } from "@/lib/data";
-import { addDays, EXPENSE_CATEGORIES, fmtDate, peso, today } from "@/lib/util";
-import { AddForm, Badge, Card, Empty, Field, PageHeader, Select, Stat } from "@/components/ui";
+import { addDays, fmtDate, peso, today } from "@/lib/util";
+import { AddForm, CategorySelect, Badge, Card, Empty, Field, PageHeader, Select, Stat } from "@/components/ui";
 import { MoneyTabs } from "../tabs";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export default async function BillsPage() {
       <AddForm label="Add recurring bill (amortization, dues, salary, utilities…)" action={addBill}>
         <Field label="Name"><input name="name" placeholder="e.g. Jasmine amortization" className="input w-full" required /></Field>
         <Field label="Amount ₱"><input type="number" step="0.01" name="amount" className="input w-full" required /></Field>
-        <Field label="Category"><Select name="category" options={EXPENSE_CATEGORIES} required /></Field>
+        <Field label="Category"><CategorySelect /></Field>
         <Field label="Repeats"><Select name="frequency" options={[{ value: "monthly", label: "Monthly" }, { value: "weekly", label: "Weekly" }, { value: "once", label: "One-time" }]} defaultValue="monthly" required /></Field>
         <Field label="Day (1–31 monthly · 1 Mon–7 Sun weekly)"><input type="number" name="day" min={1} max={31} defaultValue={1} className="input w-full" /></Field>
         <Field label="Unit"><Select name="property_id" options={props.map((p) => ({ value: p.id, label: p.name }))} /></Field>

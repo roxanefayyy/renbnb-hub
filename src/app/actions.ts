@@ -47,7 +47,7 @@ export async function addGuestPayment(fd: FormData) {
     `INSERT INTO guest_payments (guest_name, reservation_code, lead_id, kind, method, amount, due_date, received_date, reference_no, account_id, notes)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
     [str(fd.get("guest_name")) ?? "Guest", str(fd.get("reservation_code")), n(fd.get("lead_id")), str(fd.get("kind")) ?? "balance",
-      str(fd.get("method")) ?? "gcash", num(fd.get("amount")), str(fd.get("due_date")), str(fd.get("received_date")),
+      str(fd.get("method")) ?? "bank", num(fd.get("amount")), str(fd.get("due_date")), str(fd.get("received_date")),
       str(fd.get("reference_no")), n(fd.get("account_id")), str(fd.get("notes"))],
   );
   refresh("/money/payments", "/money");

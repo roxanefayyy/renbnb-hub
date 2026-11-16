@@ -86,31 +86,49 @@ export const LEAD_SOURCES = ["WhatsApp", "Messenger", "Instagram", "TikTok", "Fa
 export const LEAD_STATUSES = ["new", "quoted", "booked", "lost"] as const;
 export const LOST_REASONS = ["Price", "Dates unavailable", "No reply", "Booked elsewhere", "Location", "Other"];
 
-export const EXPENSE_CATEGORIES = [
-  "Housekeeping labor",
-  "Laundry & linen",
-  "Guest supplies",
-  "Salaries (Rhea/staff)",
-  "Amortization / rent",
-  "Association dues",
-  "Electricity",
-  "Water",
-  "Internet",
-  "Streaming",
-  "Repairs & maintenance",
-  "Pest control",
-  "Software / channel manager",
-  "Marketing & content",
-  "Professional fees",
-  "Permits & taxes",
-  "Bank / payment fees",
-  "Loan interest",
-  "Transport",
-  "Owner draw",
-  "Miscellaneous",
+/** Roxanne's chart of accounts (Nov 2026). Direct = tied to a unit. Operational = shared across all units. */
+export const EXPENSE_GROUPS: { group: string; hint: string; items: { name: string; icon: string; note?: string }[] }[] = [
+  {
+    group: "Direct costs",
+    hint: "per unit",
+    items: [
+      { name: "Electricity", icon: "⚡" },
+      { name: "Water", icon: "💧" },
+      { name: "Internet", icon: "🌐", note: "all units" },
+      { name: "Netflix", icon: "📺", note: "5 units × ₱549" },
+      { name: "Disney+", icon: "🎬", note: "2 subs × ₱599" },
+      { name: "Condo Dues", icon: "🏢", note: "7 units × ₱1,400" },
+      { name: "Maintenance & Repairs", icon: "🔧" },
+    ],
+  },
+  {
+    group: "Operational costs",
+    hint: "shared across all units",
+    items: [
+      { name: "Cleaning Fee", icon: "🧹" },
+      { name: "Laundry", icon: "👕" },
+      { name: "Supplies", icon: "🛒" },
+      { name: "Mini Bar", icon: "🍫" },
+      { name: "Shopee", icon: "📦" },
+      { name: "Mortgages", icon: "🏠", note: "305·315·316·413·415·420" },
+      { name: "Hospitable", icon: "💻" },
+      { name: "Operations Manager", icon: "👩‍💼" },
+      { name: "Marketing & Ads", icon: "📱" },
+      { name: "Legal & Permits", icon: "⚖️" },
+    ],
+  },
 ];
-// Not operating costs: excluded from operating profit
-export const NON_OPERATING = new Set(["Owner draw"]);
+export const OWNER_DRAW = "Owner draw";
+export const EXPENSE_CATEGORIES = [...EXPENSE_GROUPS.flatMap((g) => g.items.map((i) => i.name)), OWNER_DRAW];
+// Not operating costs: excluded from operating profit (money you take out, e.g. transfers to your personal GCash)
+export const NON_OPERATING = new Set([OWNER_DRAW]);
+export const CATEGORY_ICON: Record<string, string> = Object.fromEntries(
+  EXPENSE_GROUPS.flatMap((g) => g.items.map((i) => [i.name, i.icon])),
+);
+export function categoryGroup(c: string): string {
+  if (c === OWNER_DRAW) return "Owner draw";
+  return EXPENSE_GROUPS.find((g) => g.items.some((i) => i.name === c))?.group ?? "Other";
+}
 
 export const CONTENT_PLATFORMS = ["Instagram", "TikTok", "Facebook", "Stories"];
 export const PILLARS = ["The Space", "Stay Experience", "Guest Love", "Cebu Life", "Behind the Brand", "Promotions & Offers"];

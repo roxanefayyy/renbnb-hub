@@ -157,7 +157,7 @@ export default async function Today() {
               )}
             </div>
             <div>
-              <div className="label">Guests owe you (GCash / bank)</div>
+              <div className="label">Guests owe you (direct bookings)</div>
               {owed.length === 0 ? <div className="muted">None open</div> : (
                 <div className="flex justify-between"><span>{owed.length} open</span><span className="tabular-nums font-medium">{peso(owed.reduce((s, p) => s + p.amount, 0))}</span></div>
               )}

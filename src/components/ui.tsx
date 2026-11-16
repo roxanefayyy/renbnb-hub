@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { EXPENSE_GROUPS, OWNER_DRAW } from "@/lib/util";
 
 export function PageHeader({ eyebrow, title, children }: { eyebrow?: string; title: string; children?: ReactNode }) {
   return (
@@ -154,5 +155,24 @@ export function Bar({ value, max, tone = "bg-rustic" }: { value: number; max: nu
     <div className="h-2 rounded-full bg-timber/10 overflow-hidden">
       <div className={`h-full ${tone}`} style={{ width: `${w}%` }} />
     </div>
+  );
+}
+
+/** Category dropdown grouped as Direct costs / Operational costs / Owner draw */
+export function CategorySelect({ defaultValue }: { defaultValue?: string | null }) {
+  return (
+    <select name="category" defaultValue={defaultValue ?? ""} required className="input w-full">
+      <option value="" disabled>Choose…</option>
+      {EXPENSE_GROUPS.map((g) => (
+        <optgroup key={g.group} label={`${g.group} (${g.hint})`}>
+          {g.items.map((i) => (
+            <option key={i.name} value={i.name}>{i.icon} {i.name}{i.note ? ` · ${i.note}` : ""}</option>
+          ))}
+        </optgroup>
+      ))}
+      <optgroup label="Not a business cost">
+        <option value={OWNER_DRAW}>💸 Owner draw (to personal GCash / you)</option>
+      </optgroup>
+    </select>
   );
 }

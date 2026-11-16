@@ -47,12 +47,12 @@ export default async function PaymentsPage() {
       <AddForm label="Record or expect a GCash / bank payment" action={addGuestPayment}>
         <Field label="Guest"><input name="guest_name" required className="input w-full" /></Field>
         <Field label="Type"><Select name="kind" options={KINDS} defaultValue="balance" required /></Field>
-        <Field label="Method"><Select name="method" options={[{ value: "gcash", label: "GCash" }, { value: "bank", label: "Bank transfer" }]} defaultValue="gcash" required /></Field>
+        <Field label="Method"><Select name="method" options={[{ value: "bank", label: "Bank transfer / InstaPay" }, { value: "gcash", label: "GCash → business bank" }]} defaultValue="bank" required /></Field>
         <Field label="Amount ₱"><input type="number" step="0.01" name="amount" required className="input w-full" /></Field>
         <Field label="Due date"><input type="date" name="due_date" className="input w-full" /></Field>
         <Field label="Received on (blank = still waiting)"><input type="date" name="received_date" className="input w-full" /></Field>
         <Field label="Reference no."><input name="reference_no" className="input w-full" /></Field>
-        <Field label="Into account"><Select name="account_id" options={accounts.map((a) => ({ value: a.id, label: a.name }))} /></Field>
+        <Field label="Landed in (business account)"><Select name="account_id" options={accounts.map((a) => ({ value: a.id, label: a.name }))} /></Field>
         <Field label="Lead"><Select name="lead_id" options={leads.map((l) => ({ value: l.id, label: l.name }))} /></Field>
         <Field label="Hospitable booking code"><input name="reservation_code" className="input w-full" /></Field>
         <Field label="Notes" className="col-span-2"><input name="notes" className="input w-full" /></Field>
